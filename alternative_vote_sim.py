@@ -1,31 +1,32 @@
+# -*- coding: utf-8 -*-
 import random
 import numpy
 import csv
-## A stochastic simulation to predict outcomes of each riding provided that
-## an MMP system was used. RCV would be used for for local ridings and #s of
-## prop vote determined by average of 2008, 2011, and 2015 party vote.
-
+## A simulation for ranked choice voting in single member districts.
 def data_load():
     elect_res = {}
     district = []
-    with open("election_results.csv","rb") as csvfile:
+    with open("election_results_2015.csv","rb") as csvfile:
         filereader = csv.reader(csvfile, delimiter=',', quotechar='|')
         row1=next(filereader)
         for row in filereader:
             key = int(row[0])
-            if key in district:
-                party = row[5]
-                votes = int(row[6])
-                total_votes = int(row[9])-int(row[8])
+            valid = str(row[3])
+            if key in district and valid == 'validated':
+                party = row[8]
+                votes = int(row[10])
+                total_votes = int(row[13])
                 elect_res[key].append([party, votes, total_votes])
-            if key not in district:
+            if key not in district and valid == 'validated':
                 district.append(key)
-                party = row[5]
-                votes = int(row[6])
-                total_votes = int(row[9])-int(row[8])
+                party = row[8]
+                votes = int(row[10])
+                total_votes = int(row[13])
                 elect_res[key] = [[party, votes, total_votes]]
-            
+    assert(len(district) == 338)
     return elect_res, district
+
+
 class second_choice(object):
     def __init__(self): # numbers come from http://www.ekospolitics.com/index.php/2015/10/marginally-significant-narrowing-of-liberal-lead/
         # list order: libs, cons, ndp, greens, bloc, unknown (this will be randomized)
@@ -41,21 +42,20 @@ def local_contest(data, districs, sc):
     # a function that goes through a run-off process using the second choices as applied to each district
     winners = []
     for key in districts:
-        print key
         vote_percentage = []
         local_winner = []
         local_winner.append(runoff(data[key], sc))
 ##        for num_parties in range(len(data[key])):
 ##            party = data[key][num_parties][0]
 ##            percentage = float(data[key][num_parties][1])/data[key][num_parties][2]
-                
+
         #  print local_winner
         winners.append(local_winner)
     return winners
 
 
 def runoff(local_race, sc):
-    
+
     local_winner = 0
     lib = 'Liberal'
     con = 'Conservative'
@@ -74,7 +74,6 @@ def runoff(local_race, sc):
         if len(local_race) == 1:
             local_winner = local_race[0]
         if local_winner == 0:
-            print local_race
             big_l_val = min([x[1] for x in local_race])
             big_l_ind = [i for i in range(len(local_race)) if local_race[i][1] == big_l_val]
             big_l_ind = big_l_ind[0]
@@ -115,11 +114,14 @@ def runoff(local_race, sc):
                 if local_race[i][0] == bloc:
                     local_race[i][1] += bloc_trans
     return local_winner
-                    
+
 if __name__ =="__main__":
 
     election_data, districts = data_load()
     sc = second_choice()
-    print election_data[districts[0]], float(election_data[districts[0]][0][1])/election_data[districts[0]][0][2]
     winners = local_contest(election_data, districts, sc)
+    party_seats = []
+    assert (len(winners) == 338)
+    for i in range(len(winners)):
+        party_seats.append(winners[i][0][0])
     
